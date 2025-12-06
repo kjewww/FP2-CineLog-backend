@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const listController = require('../controllers/listContoller');
+const listController = require('../controllers/listController');
 const authMiddleware = require('../middleware/authMiddleware');
 const { protect } = require('../middleware/authMiddleware');
 
-router.use(router);
+router.use(protect);
 
 router.post('/', listController.addList);                           
 router.get('/', listController.getAllList);                         

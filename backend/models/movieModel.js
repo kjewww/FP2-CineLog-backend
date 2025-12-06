@@ -10,6 +10,51 @@ const TMDB_OPTIONS = {
     },
 };
 
+const getDetailMovie = async (movieId) => {
+    try {
+        const url = `${TMDB_URL}/movie/${movieId}`;
+        const response = await axios.get(url, TMDB_OPTIONS);
+        const data = response.data;
+
+        const mappedDetail = {
+            tmdb_id: data.id,
+            title: data.title,
+            overview: data.overview,
+            poster_path: data.poster_path,
+            backdrop_path: data.backdrop_path,
+            release_year: data.release_date ? data.release_date.split('-')[0] : null,
+            genres: data.genres,
+            vote_average: data.vote_average,
+            runtime: data.runtime
+        };
+
+        // Prepare minimal movie object for internal DB caching and ensure it's stored
+        const movieForDb = {
+            tmdb_id: data.id,
+            title: data.title,
+            release_year: data.release_date ? parseInt(data.release_date.split('-')[0]) : null,
+            poster_path: data.poster_path,
+            media_type: 'movie',
+            genre_ids: data.genres ? data.genres.map(g => g.id) : [],
+            plot: data.overview
+        };
+
+        try {
+            const internalId = await ensureMovieExists(movieForDb);
+            // tambahkan internal id ke response supaya client tahu id internal jika perlu
+            return Object.assign({ internal_id: internalId }, mappedDetail);
+        } catch (dbErr) {
+            // Jika penyimpanan gagal, tetap kembalikan detail TMDB tapi log error
+            console.error('Error ensuring movie exists in DB:', dbErr.message || dbErr);
+            return mappedDetail;
+        }
+
+    } catch (error) {
+        console.error("Error fetching movie detail:", error.message);
+        throw new Error("Gagal mengambil detail film.");
+    }
+}
+
 const mapTmdbMovie = (tmdbMovie) => {
     const tmdbId = tmdbMovie.id;
     const releaseYear = tmdbMovie.release_date ? parseInt(tmdbMovie.release_date.substring(0, 4)) : null;
@@ -60,7 +105,7 @@ const filterMovies = async ({ genreIds = [], sortBy = 'popularity.desc', page = 
         // Gabungkan ID genre menjadi string (misalnya '28,12')
         const genreString = genreIds.join(','); 
         
-        let url = `${TMDB_URL}/discover/movie?language=en-US`;
+        let url = `${TMDB_URL}/discover/movie?language=en-US&page=10`;
         url += `&sort_by=${sortBy}`;
         url += `&page=${page}`;
         
@@ -140,6 +185,7 @@ module.exports = {
     filterMovies,
     ensureMovieExists,
     getGenreList,
+    getDetailMovie,
     getUserById,
 };
 

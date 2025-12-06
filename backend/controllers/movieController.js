@@ -7,7 +7,7 @@ const getTrending = async (req, res) => {
     
     try {
         const movies = await movieModel.getTrendingMovies(timeWindow);
-        res.json(movies);
+        res.json({results: movies});
     } catch (error) {
         console.error('Error fetching trending movies:', error);
         res.status(500).json({ message: error.message });
@@ -60,9 +60,22 @@ const getGenres = async (req, res) => {
     }
 };
 
+// Get detail movie by TMDB id
+const getMovieDetail = async (req, res) => {
+    const movieId = req.params.id;
+    try {
+        const detail = await movieModel.getDetailMovie(movieId);
+        res.json(detail);
+    } catch (error) {
+        console.error('Error fetching movie detail:', error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     getTrending,
     searchMovies,
     discoverMovies,
     getGenres
+    ,getMovieDetail
 };

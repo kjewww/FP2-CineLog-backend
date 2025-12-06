@@ -1,13 +1,17 @@
 const express = require('express');
 const router = express.Router();
-const authController = require('../controllers/authContoller');
+const authController = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
 
 router.post('/register', authController.registerUser); // create
 router.post('/login', authController.loginUser);
+router.get('/users', authController.getAllUser); // get all users (no auth)
 router.get('/profile', protect, (req, res) => { // read
-    res.json({
-        message: `akses berhasil untuk user iD: ${req.userId}`
+    res.status(200).json({
+        message: `akses berhasil untuk user iD: ${req.userId}`,
+        id: req.userId,
+        username: req.username,
+        displayName: req.displayName
     });
 });
 router.put('/update-display', protect, authController.updateUserDisplay); // update

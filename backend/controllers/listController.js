@@ -34,10 +34,11 @@ try {
 // Mendapatkan semua list milik user
 const getAllList = async (req, res) => {
 try {
-    const userId = req.user.id;
-
-    const lists = await listModel.getAllListsByUserId(userId);
-
+    const userId = req.userId;
+    // support ?include=movies to include movie objects per list
+    const include = req.query.include;
+    const includeMovies = include === 'movies';
+    const lists = await listModel.getAllListsByUserId(userId, includeMovies);
     res.status(200).json({
     success: true,
     data: lists,
@@ -57,7 +58,7 @@ try {
 const getListDetail = async (req, res) => {
 try {
     const { listId } = req.params;
-    const userId = req.user.id;
+    const userId = req.userId;
 
     // Cek apakah user adalah pemilik list
     const isOwner = await listModel.isListOwner(listId, userId);
@@ -97,7 +98,7 @@ const updateList = async (req, res) => {
 try {
     const { listId } = req.params;
     const { name, description } = req.body;
-    const userId = req.user.id;
+    const userId = req.userId;
 
     // Validasi input
     if (!name || name.trim() === '') {
@@ -145,7 +146,7 @@ try {
 const deleteList = async (req, res) => {
 try {
     const { listId } = req.params;
-    const userId = req.user.id;
+    const userId = req.userId;
 
     // Cek apakah user adalah pemilik list
     const isOwner = await listModel.isListOwner(listId, userId);
@@ -186,7 +187,7 @@ const addMovieToList = async (req, res) => {
 try {
     const { listId } = req.params;
     const { tmdbId } = req.body;
-    const userId = req.user.id;
+    const userId = req.userId;
 
     // Validasi input
     if (!tmdbId) {
@@ -207,11 +208,16 @@ try {
     }
 
     const listItem = await listModel.addMovieToList(listId, tmdbId);
+    // listModel now returns { addedMovie, movieCount }
+    const { addedMovie, movieCount } = listItem;
 
     res.status(201).json({
     success: true,
     message: 'Movie added to list successfully',
-    data: listItem
+    data: {
+        addedMovie,
+        movieCount
+    }
     });
 } catch (error) {
     console.error('Error adding movie to list:', error);
@@ -242,7 +248,7 @@ try {
 const removeMovieFromList = async (req, res) => {
 try {
     const { listId, tmdbId } = req.params;
-    const userId = req.user.id;
+    const userId = req.userId;
 
     // Cek apakah user adalah pemilik list
     const isOwner = await listModel.isListOwner(listId, userId);

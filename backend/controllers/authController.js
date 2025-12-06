@@ -9,6 +9,7 @@ const generateToken = (id) =>
 const registerUser = async (req, res) =>
 {
     const { username, password, displayName } = req.body;
+    console.log("req.body: ",req.body);
 
     if (!username || !password)
     {
@@ -29,10 +30,11 @@ const registerUser = async (req, res) =>
     }
     catch (error)
     {
-        if (error.message === 'Username sudah terdaftar')
+        if (error.message === 'Username sudah ada')
         {
             return res.status(409).json({
-                message: error.message
+                meesage: "Username sudah terdaftar",
+                error: error.message
             });
         }
         console.error(error);
@@ -50,7 +52,7 @@ const loginUser = async (req, res) =>
         const user = await userModel.getUserByUsername(username);
         if (user && (await userModel.comparePassword(password, user.password_hash)))
         {
-            res.json({
+            res.status(200).json({
                 id: user.id,
                 username: user.username,
                 displayName: user.display_name,
@@ -122,9 +124,21 @@ const deleteAccount = async (req, res) => {
     }
 };
 
+const getAllUser = async (req, res) => {
+    try {
+        const users = await userModel.getAllUsers();
+        // Kembalikan array user
+        res.json({ users });
+    } catch (error) {
+        console.error('Error fetching users:', error);
+        res.status(500).json({ message: 'Gagal mengambil daftar user.' });
+    }
+};
+
 module.exports = {
     registerUser,
     loginUser,
     updateUserDisplay,
     deleteAccount,
+    getAllUser,
 }

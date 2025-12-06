@@ -63,6 +63,13 @@ const deleteUser = async (id) =>
     return result.rows[0];
 };
 
+const getAllUsers = async () => {
+    // Hanya ambil kolom yang aman untuk dikirim ke client (tanpa password_hash)
+    const query = 'SELECT id, username, display_name FROM users ORDER BY id';
+    const result = await db.query(query);
+    return result.rows;
+}
+
 module.exports = 
 {
     createUser,
@@ -71,4 +78,5 @@ module.exports =
     updateDisplayName,
     deleteUser,
     getUserById,
+    getAllUsers,
 };

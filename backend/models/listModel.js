@@ -11,7 +11,40 @@
         return result.rows[0];
     };
 
-    const getAllListsByUserId = async (userId) => {
+    const getAllListsByUserId = async (userId, includeMovies = false) => {
+    if (includeMovies) {
+        const query = `
+        SELECT 
+            cl.*,
+            COUNT(li.tmdb_id) as movie_count,
+            COALESCE(
+                json_agg(
+                    json_build_object(
+                        'tmdb_id', m.tmdb_id,
+                        'title', m.title,
+                        'release_year', m.release_year,
+                        'poster_path', m.poster_path,
+                        'media_type', m.media_type,
+                        'genre', m.genre,
+                        'added_at', li.added_at
+                    ) ORDER BY li.added_at DESC
+                ) FILTER (WHERE m.tmdb_id IS NOT NULL), '[]'
+            ) as movies
+        FROM custom_lists cl
+        LEFT JOIN list_items li ON cl.id = li.list_id
+        LEFT JOIN movies m ON li.tmdb_id = m.tmdb_id
+        WHERE cl.user_id = $1
+        GROUP BY cl.id
+        ORDER BY cl.created_at DESC
+        `;
+
+        const result = await db.query(query, [userId]);
+        return result.rows.map(r => {
+            // Ensure movie_count is integer and movies is an array
+            return Object.assign({}, r, { movie_count: parseInt(r.movie_count, 10), movies: r.movies || [] });
+        });
+    }
+
     const query = `
         SELECT 
         cl.*,
@@ -23,7 +56,7 @@
         ORDER BY cl.created_at DESC
     `;
     const result = await db.query(query, [userId]);
-    return result.rows;
+    return result.rows.map(r => Object.assign({}, r, { movie_count: parseInt(r.movie_count, 10) }));
     };
 
     const getListById = async (listId) => {
@@ -107,8 +140,24 @@
         VALUES ($1, $2, NOW())
         RETURNING *
     `;
-    const result = await db.query(insertQuery, [listId, tmdbId]);
-    return result.rows[0];
+    const insertResult = await db.query(insertQuery, [listId, tmdbId]);
+
+    // Ambil data movie yang baru saja ditambahkan beserta waktu penambahan
+    const addedMovieQuery = `
+        SELECT m.tmdb_id, m.title, m.release_year, m.poster_path, m.media_type, m.genre, li.added_at
+        FROM list_items li
+        JOIN movies m ON li.tmdb_id = m.tmdb_id
+        WHERE li.list_id = $1 AND li.tmdb_id = $2
+        LIMIT 1
+    `;
+    const addedMovieRes = await db.query(addedMovieQuery, [listId, tmdbId]);
+    const addedMovie = addedMovieRes.rows[0];
+
+    // Hitung jumlah movie di list
+    const countRes = await db.query('SELECT COUNT(*) FROM list_items WHERE list_id = $1', [listId]);
+    const movieCount = parseInt(countRes.rows[0].count, 10);
+
+    return { addedMovie, movieCount };
     };
 
     // Hapus movie dari list
