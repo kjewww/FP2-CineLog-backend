@@ -8,3 +8,7 @@
 #### Database: PostgreSQL
 #### Auth: JWT
 #### Framework: Express js
+
+## Other CineLog Version:
+#### FE: https://github.com/kjewww/frontend
+#### BE: https://github.com/kjewww/backend
